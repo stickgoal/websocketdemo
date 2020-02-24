@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>websocket聊天demo</title>
+    <style>
+
+    </style>
+</head>
+<body>
+
+<input type="text" name="username" placeholder="用户名"/>
+<button id="login" onclick="connect()">登录</button>
+
+<div id="message">
+    <div>
+        <textarea name="messages" id="messages" cols="30" rows="10"></textarea>
+    </div>
+    <input type="checkbox" value="group" id="isGroup" checked>
+
+    <label for="isGroup">群聊</label>或者发给
+    <select id="users">
+
+    </select>
+    <input type="text" id="msg">
+    <button id="send" onclick="send()">发送</button>
+</div>
+
+
+<script>
+    var ws;
+    var username;
+
+    function connect() {
+        username = document.querySelector("[name=username]").value;
+        if (!username) {
+            alert("请输入用户名")
+            return;
+        }
+
+        var host = document.location.host;
+        var pathname = document.location.pathname;
+
+
+        ws = new WebSocket("ws://" + host + "/chat2?username=" + username);
+
+
+        ws.onmessage = function (event) {
+            var log = document.getElementById("messages");
+            var users = document.getElementById("users");
+            console.log(event.data);
+            var message = JSON.parse(event.data);
+            switch (message.messageType) {
+                case "manage":
+                    var userList = message.content;
+                    users.innerHTML = null;
+                    for (var i = 0; i < userList.length; i++) {
+                        var name = userList[i];
+                        if (name != username) {
+                            var option = document.createElement("option");
+                            option.innerText = userList[i];
+                            option.value = userList[i];
+                            option.className = "user";
+                            users.appendChild(option);
+                        }
+                    }
+                    break;
+                case "single":
+                case "group":
+                    log.innerHTML += message.from + " : " + message.content + "\n";
+                    break;
+
+            }
+        };
+    }
+
+    function send() {
+        var content = document.getElementById("msg").value;
+        var isGroup = document.getElementById("isGroup");
+        var sendTo = document.getElementById("users").value;
+        var log = document.getElementById("messages");
+        var message = {
+            "messageType": isGroup.checked ? "group" : "single",
+            "to": sendTo,
+            "content": content
+        };
+        var messageString = JSON.stringify(message);
+
+        if (!isGroup.checked)
+            log.innerHTML += username + " : " + message.content + "\n";
+
+
+        ws.send(messageString);
+    }
+
+</script>
+
+</body>
+</html>
